@@ -8,13 +8,22 @@ NAME 		:= latency
 PREFIX		:=
 N 			:= 1
 
-all: $(PREFIX)cuda-$(NAME) $(PREFIX)cuda-$(NAME)-cudamalloc $(PREFIX)cuda-$(NAME)-malloc
+all: $(PREFIX)cuda-$(NAME) $(PREFIX)cuda-$(NAME)-cudamalloc $(PREFIX)cuda-$(NAME)-malloc $(PREFIX)cuda-$(NAME)-malloc-host $(PREFIX)cuda-$(NAME)-malloc-device-close $(PREFIX)cuda-$(NAME)-malloc-device-remote
 
 $(PREFIX)cuda-$(NAME): main.cu Makefile
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -o $@ $< $(LDFLAGS)
 
 $(PREFIX)cuda-$(NAME)-malloc: main.cu Makefile
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -DMALLOC -o $@ $< $(LDFLAGS)
+
+$(PREFIX)cuda-$(NAME)-malloc-host: main.cu Makefile
+	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -DMALLOC -DHOST -o $@ $< $(LDFLAGS)
+
+$(PREFIX)cuda-$(NAME)-malloc-device-close: main.cu Makefile
+	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -DMALLOC -DCLOSE_DEVICE -o $@ $< $(LDFLAGS)
+
+$(PREFIX)cuda-$(NAME)-malloc-device-remote: main.cu Makefile
+	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -DMALLOC -DREMOTE_DEVICE -o $@ $< $(LDFLAGS)
 
 $(PREFIX)cuda-$(NAME)-cudamalloc: main.cu Makefile
 	$(NVCC) $(NVCCFLAGS) $(INCLUDES) -DCUDAMALLOC -o $@ $< $(LDFLAGS)
@@ -28,5 +37,6 @@ $(PREFIX)hip-$(NAME): main.hip Makefile ../rocm-metrics/rocm-metrics.hpp
 
 clean:
 	rm -f cuda-$(NAME) hip-$(NAME)
+	rm -f cuda-$(NAME)-*
 	rm -f *-cuda-$(NAME) *-hip-$(NAME)
 	rm main.hip
