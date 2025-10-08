@@ -3,14 +3,17 @@
 #include "../gpu-clock.cuh"
 #include "../gpu-error.h"
 // #include <algorithm>
+#include <vector>
 #include <cuComplex.h>
 #include <cuda_runtime.h>
 #include <iomanip>
 #include <iostream>
 #include <random>
 #include <sys/time.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <sys/types.h>
 
-using namespace std;
 
 typedef int64_t dtype;
 
@@ -62,18 +65,26 @@ int main(int argc, char **argv) {
 
     MeasurementSeries times;
     const int64_t iters = max(LEN, (int64_t)100000);
-
     for (int i = 0; i < 21; i++) {
-
-      vector<int64_t> order(LEN);
+      std::vector<int64_t> order(LEN);
+      //int64_t* order = (int64_t*) malloc(sizeof(int64_t) * LEN);
       int64_t *buf = NULL;
       int64_t *dbuf = NULL;
       dtype *dummy_buf = NULL;
 
-      GPU_ERROR(
-          cudaMallocManaged(&buf, skip_factor * cl_size * LEN * sizeof(dtype)));
-      GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
-      GPU_ERROR(cudaMallocManaged(&dummy_buf, sizeof(dtype)));
+      buf = (int64_t*) malloc(skip_factor * cl_size * LEN * sizeof(dtype));
+      dbuf = (int64_t*) malloc(skip_factor * cl_size * LEN * sizeof(dtype));
+      dummy_buf = (dtype*) malloc(sizeof(dtype));
+      //GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+      //GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+      //GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+      //GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+      //GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+      //GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+      //GPU_ERROR(cudaMallocManaged(&buf, skip_factor * cl_size * LEN * sizeof(dtype)));
+      //GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
+      //GPU_ERROR(cudaMalloc(&dummy_buf, sizeof(dtype)));
+      //GPU_ERROR(cudaMallocManaged(&dummy_buf, sizeof(dtype)));
       for (int64_t i = 0; i < LEN; i++) {
         order[i] = i + 1;
       }
@@ -121,25 +132,28 @@ int main(int argc, char **argv) {
       times.add(milliseconds / 1000);
 
       GPU_ERROR(cudaGetLastError());
-      GPU_ERROR(cudaFree(buf));
-      GPU_ERROR(cudaFree(dbuf));
-      GPU_ERROR(cudaFree(dummy_buf));
+      //GPU_ERROR(cudaFree(buf));
+      //GPU_ERROR(cudaFree(dbuf));
+      //GPU_ERROR(cudaFree(dummy_buf));
+      free(buf);
+      free(dbuf);
+      free(dummy_buf);
     }
     double dt = times.value();
     double dtmed = times.median();
     double dtmin = times.getPercentile(0.05);
     double dtmax = times.getPercentile(0.95);
-    cout << setw(9) << iters << " " << setw(5) << clock << " " //
-         << setw(8) << skip_factor * LEN * cl_size * sizeof(dtype) / 1024.0
+    std::cout << std::setw(9) << iters << " " << std::setw(5) << clock << " " //
+         << std::setw(8) << skip_factor * LEN * cl_size * sizeof(dtype) / 1024.0
          << " "                                            //
-         << fixed                                          //
-         << setprecision(1) << setw(8) << dt * 1000 << " " //
-         << setw(7) << setprecision(1)
+         << std::fixed                                          //
+         << std::setprecision(1) << std::setw(8) << dt * 1000 << " " //
+         << std::setw(7) << std::setprecision(1)
          << (double)dt / iters * clock * 1000 * 1000 << " "
          << (double)dtmed / iters * clock * 1000 * 1000 << " "
          << (double)dtmin / iters * clock * 1000 * 1000 << " "
          << (double)dtmax / iters * clock * 1000 * 1000 << "\n"
-         << flush;
+         << std::flush;
   }
-  cout << "\n";
+  std::cout << "\n";
 }
