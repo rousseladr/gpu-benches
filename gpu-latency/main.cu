@@ -72,19 +72,32 @@ int main(int argc, char **argv) {
       int64_t *dbuf = NULL;
       dtype *dummy_buf = NULL;
 
+#if defined(MALLOC)
       buf = (int64_t*) malloc(skip_factor * cl_size * LEN * sizeof(dtype));
       dbuf = (int64_t*) malloc(skip_factor * cl_size * LEN * sizeof(dtype));
       dummy_buf = (dtype*) malloc(sizeof(dtype));
-      //GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
-      //GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
-      //GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
-      //GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
-      //GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
-      //GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
-      //GPU_ERROR(cudaMallocManaged(&buf, skip_factor * cl_size * LEN * sizeof(dtype)));
-      //GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
-      //GPU_ERROR(cudaMalloc(&dummy_buf, sizeof(dtype)));
-      //GPU_ERROR(cudaMallocManaged(&dummy_buf, sizeof(dtype)));
+#if defined(CLOSE_DEVICE)
+      GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+      GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+      GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+#elif defined(REMOTE_DEVICE)
+      GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 3));
+      GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 3));
+      GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, 3));
+#elif defined(HOST)
+      GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+      GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+      GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+#endif
+#elif defined(CUDAMALLOC)
+      buf = (int64_t*) malloc(skip_factor * cl_size * LEN * sizeof(dtype));
+      GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
+      GPU_ERROR(cudaMalloc(&dummy_buf, sizeof(dtype)));
+#else // defaut
+      GPU_ERROR(cudaMallocManaged(&buf, skip_factor * cl_size * LEN * sizeof(dtype)));
+      GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
+      GPU_ERROR(cudaMallocManaged(&dummy_buf, sizeof(dtype)));
+#endif
       for (int64_t i = 0; i < LEN; i++) {
         order[i] = i + 1;
       }
@@ -112,6 +125,11 @@ int main(int argc, char **argv) {
                            skip_factor * cl_size * LEN * sizeof(dtype),
                            cudaMemcpyHostToDevice));
 
+#ifdef CUDAMALLOC
+      int64_t* tmp = dbuf;
+      dbuf = buf;
+      buf = tmp;
+#endif
       pchase<dtype><<<1, 1>>>(buf, dummy_buf, iters);
       pchase<dtype><<<1, 1>>>(buf, dummy_buf, iters);
 
@@ -132,12 +150,19 @@ int main(int argc, char **argv) {
       times.add(milliseconds / 1000);
 
       GPU_ERROR(cudaGetLastError());
-      //GPU_ERROR(cudaFree(buf));
-      //GPU_ERROR(cudaFree(dbuf));
-      //GPU_ERROR(cudaFree(dummy_buf));
+#if defined(MALLOC)
       free(buf);
       free(dbuf);
       free(dummy_buf);
+#elif defined(CUDAMALLOC)
+      free(dbuf);
+      GPU_ERROR(cudaFree(buf));
+      GPU_ERROR(cudaFree(dummy_buf));
+#else // Default
+      GPU_ERROR(cudaFree(buf));
+      GPU_ERROR(cudaFree(dbuf));
+      GPU_ERROR(cudaFree(dummy_buf));
+#endif
     }
     double dt = times.value();
     double dtmed = times.median();
