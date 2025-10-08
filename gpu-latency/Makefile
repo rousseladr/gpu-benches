@@ -3,7 +3,7 @@ NVCC := nvcc
 # internal flags
 NVCCFLAGS   := -std=c++11 -O3 -arch=sm_70 --compiler-options="-O2 -pipe -march=native -Wall -fopenmp" -Xcompiler -rdynamic --generate-line-info
 CCFLAGS     := 
-LDFLAGS     := -L/opt/cuda/lib64 -lcublas -lnvidia-ml
+LDFLAGS     := -L/ccc/products/nvhpc-23.7/system/default/Linux_x86_64/23.7/math_libs/lib64/ -lcublas -lnvidia-ml
 NAME 		:= latency
 PREFIX		:=
 N 			:= 1
