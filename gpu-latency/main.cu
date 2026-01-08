@@ -93,6 +93,10 @@ int main(int argc, char **argv) {
       buf = (int64_t*) malloc(skip_factor * cl_size * LEN * sizeof(dtype));
       GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
       GPU_ERROR(cudaMalloc(&dummy_buf, sizeof(dtype)));
+#elif defined(MANAGED)
+      GPU_ERROR(cudaMallocManaged(&buf, skip_factor * cl_size * LEN * sizeof(dtype)));
+      GPU_ERROR(cudaMallocManaged(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
+      GPU_ERROR(cudaMallocManaged(&dummy_buf, sizeof(dtype)));
 #else // defaut
       GPU_ERROR(cudaMallocManaged(&buf, skip_factor * cl_size * LEN * sizeof(dtype)));
       GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
@@ -157,6 +161,10 @@ int main(int argc, char **argv) {
 #elif defined(CUDAMALLOC)
       free(dbuf);
       GPU_ERROR(cudaFree(buf));
+      GPU_ERROR(cudaFree(dummy_buf));
+#elif defined(Managed)
+      GPU_ERROR(cudaFree(buf));
+      GPU_ERROR(cudaFree(dbuf));
       GPU_ERROR(cudaFree(dummy_buf));
 #else // Default
       GPU_ERROR(cudaFree(buf));
