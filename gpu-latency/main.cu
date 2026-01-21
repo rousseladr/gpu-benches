@@ -45,19 +45,11 @@ __global__ void pchase(T *buf, T *__restrict__ dummy_buf, int64_t N) {
   }
 }
 
-int main(int argc, char **argv) {
-
-#ifdef __NVCC__
-  GPU_ERROR(cudaFuncSetAttribute(
-      pchase<dtype>, cudaFuncAttributePreferredSharedMemoryCarveout, 0));
-#endif
+void launch(std::mt19937 &g)
+{
   unsigned int clock = getGPUClock();
-
   const int cl_size = 128 / sizeof(int64_t);
   const int skip_factor = 1;
-
-  std::random_device rd;
-  std::mt19937 g(rd());
 
   for (int64_t LEN = 16; LEN < (1 << 24); LEN = LEN * 1.042 + 1 + rand() % 11) {
     if (LEN * skip_factor * cl_size * sizeof(dtype) > 120 * 1024 * 1024)
@@ -181,4 +173,17 @@ int main(int argc, char **argv) {
          << std::flush;
   }
   std::cout << "\n";
+}
+
+int main(int argc, char **argv) {
+
+#ifdef __NVCC__
+  GPU_ERROR(cudaFuncSetAttribute(
+      pchase<dtype>, cudaFuncAttributePreferredSharedMemoryCarveout, 0));
+#endif
+
+  std::random_device rd;
+  std::mt19937 g(rd());
+
+  launch(g);
 }
