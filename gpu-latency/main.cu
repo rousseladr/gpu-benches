@@ -97,6 +97,22 @@ int main(int argc, char **argv) {
       GPU_ERROR(cudaMallocManaged(&buf, skip_factor * cl_size * LEN * sizeof(dtype)));
       GPU_ERROR(cudaMallocManaged(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
       GPU_ERROR(cudaMallocManaged(&dummy_buf, sizeof(dtype)));
+#if defined(CLOSE_DEVICE)
+      GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+      GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+      GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, 0));
+#elif defined(REMOTE_DEVICE)
+      GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 3));
+      GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, 3));
+      GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, 3));
+#elif defined(HOST)
+      GPU_ERROR(cudaMemAdvise(buf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+      GPU_ERROR(cudaMemAdvise(dbuf, cl_size * LEN * sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+      GPU_ERROR(cudaMemAdvise(dummy_buf, sizeof(dtype), cudaMemAdviseSetPreferredLocation, cudaMemLocationTypeHost));
+#endif
+#elif defined(CUDAMALLOC)
+      buf = (int64_t*) malloc(skip_factor * cl_size * LEN * sizeof(dtype));
+      GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
 #else // defaut
       GPU_ERROR(cudaMallocManaged(&buf, skip_factor * cl_size * LEN * sizeof(dtype)));
       GPU_ERROR(cudaMalloc(&dbuf, skip_factor * cl_size * LEN * sizeof(dtype)));
